@@ -50,6 +50,7 @@ class TitleFetcher(object):
         # (note): possibility for adding a cache here
         try:
             # (note): A timeout bound fetch to guard against very slow fetches
+            resp = None
             with eventlet.Timeout(5, False):
                 resp = requests.get(url)
 
