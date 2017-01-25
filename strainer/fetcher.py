@@ -6,6 +6,7 @@ from eventlet import greenpool
 import requests
 from requests import exceptions as re_exceptions
 
+from cache_utils import Memcache
 
 LOG = logging.getLogger(__name__)
 
@@ -48,7 +49,13 @@ class TitleFetcher(object):
         """
 
         # (note): possibility for adding a cache here
+
+        if Memcache.has_key(url):
+            LOG.debug("Cache hit for key: %s" % url)
+            return Memcache.get_from_cache(url)
+
         try:
+            resp = None
             # (note): A timeout bound fetch to guard against very slow fetches
             with eventlet.Timeout(5, False):
                 resp = requests.get(url)
@@ -64,7 +71,10 @@ class TitleFetcher(object):
                 soup = bs4.BeautifulSoup(
                     resp.content.decode('utf-8', 'ignore'), "lxml")
                 if soup.title:
-                    return soup.title.text
+                    title = soup.title.text
+                    LOG.debug("Setting in cache. Key: %s" % url)
+                    Memcache.set_to_cache(url, title)
+                    return title
         except re_exceptions.Timeout as te:
             # (note): This could be a good candidate for re-tries
             msg = "TIMEOUT occurred while fetching url: %s\n Error: %s"
